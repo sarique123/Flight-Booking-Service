@@ -2,9 +2,7 @@ const {BookingService} = require('../services');
 const {ErrorResponse,SuccessResponse} = require('../utils/common');
 const {StatusCodes} = require('http-status-codes');
 
-async function createBooking(req,res) {
-    console.log("In controller");
-    
+async function createBooking(req,res) { 
     try {
         const response = await BookingService.createBooking({
             flightId: req.body.flightId,
