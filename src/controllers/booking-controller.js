@@ -5,6 +5,8 @@ const inMemDb = {};
 
 async function createBooking(req,res) { 
     try {
+        console.log("In controller");
+        
         const response = await BookingService.createBooking({
             flightId: req.body.flightId,
             userId: req.body.userId,

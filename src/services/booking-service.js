@@ -3,7 +3,7 @@ const { BookingRepository } = require('../repositories');
 const db = require('../models');
 const AppError = require('../utils/errors/app-error');
 const { StatusCodes } = require('http-status-codes');
-const {ServerConfig}= require('../config');
+const {ServerConfig,QueueConfig}= require('../config');
 const {Enums} = require('../utils/common');
 const {CANCELLED,BOOKED} = Enums.BOOKING_STATUS;
 
@@ -12,9 +12,9 @@ const bookingRepository = new BookingRepository();
 async function createBooking(data){
     try {
         const result = await db.sequelize.transaction(async function bookingImpl(t) {
+            
             const flight = await axios.get(`${ServerConfig.FLIGHT_SERVICE}/api/v1/flights/${data.flightId}`);
             const flightData = flight.data.data;
-            
 
             if(data.noOfSeats > flightData.totalSeats){
                 throw new AppError('Not enough seats are available',StatusCodes.BAD_REQUEST);
@@ -41,7 +41,7 @@ async function makePayment(data){
     try { 
         const result = await db.sequelize.transaction(async function paymentImpl(t) {
             const bookingDetails = await bookingRepository.get(data.bookingId,t);
-            
+
             if(bookingDetails.status == CANCELLED){
                 throw new AppError('The booking has expired',StatusCodes.BAD_REQUEST);
             }
@@ -65,6 +65,12 @@ async function makePayment(data){
             
             // We assume here that payment has successfully completed
             await bookingRepository.update({status : BOOKED},data.bookingId,t);
+            
+            QueueConfig.sendData({
+                subject : 'Flight booked',
+                content: `Booking successfully done for the flight ${bookingDetails.flightId}`,
+                recepientEmail: 'abc@gmail.com'
+            });
         });
         return result;
     } catch (error) {
